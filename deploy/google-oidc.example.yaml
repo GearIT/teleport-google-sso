@@ -1,0 +1,25 @@
+# Google OIDC connector template. Copy to google-oidc.yaml, fill in the
+# client_id/client_secret from Google Cloud Console (OAuth 2.0 Client ID,
+# type "Web application"), and set redirect_url to your public proxy address.
+#
+# Authorized redirect URI to register in Google Console must EXACTLY match
+# redirect_url below, e.g. https://teleport.example.com/v1/webapi/oidc/callback
+kind: oidc
+version: v3
+metadata:
+  name: google
+spec:
+  client_id: REPLACE_WITH_CLIENT_ID.apps.googleusercontent.com
+  client_secret: REPLACE_WITH_CLIENT_SECRET
+  issuer_url: https://accounts.google.com
+  redirect_url: https://teleport.example.com/v1/webapi/oidc/callback
+  display: Google
+  scope:
+    - openid
+    - email
+    - profile
+  claims_to_roles:
+    - claim: email
+      value: "*"
+      roles:
+        - access

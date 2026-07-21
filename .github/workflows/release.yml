@@ -1,0 +1,156 @@
+name: Release
+
+# One pipeline per tag: build the patched OSS Teleport (Google SSO / OIDC)
+# ONCE inside the Teleport buildbox, then fan out to:
+#   - push a runtime Docker image to GHCR
+#   - attach binaries + tarball + checksums to the GitHub Release
+# Both downstream jobs consume the SAME build artifact, so the image and the
+# released binaries are always bit-identical.
+#
+# Trigger: push a tag like v19.0.0-oidc.1 (or run manually to dry-build/push image).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Extra image tag to push on manual runs"
+        default: "dev"
+        required: false
+
+permissions:
+  contents: write # create the GitHub Release
+  packages: write # push image to GHCR
+
+env:
+  # Keep in sync with build.assets/images.mk (BUILDBOX_VERSION).
+  BUILDBOX: ghcr.io/gravitational/teleport-buildbox:teleport19
+  IMAGE: ghcr.io/${{ github.repository }}/teleport
+
+jobs:
+  build:
+    name: Build binaries (buildbox)
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/gravitational/teleport-buildbox:teleport19
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # version/gitref targets need history + tags
+
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Builds the web UI (webassets) AND all binaries with webassets embedded.
+      - name: Build (make full)
+        env:
+          CGO_ENABLED: "1"
+        run: make full
+
+      - name: Resolve version
+        id: ver
+        run: echo "version=$(make -s print-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Sanity check
+        run: ./build/teleport version
+
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: teleport-linux-amd64
+          path: |
+            build/teleport
+            build/tctl
+            build/tsh
+            build/tbot
+          retention-days: 3
+
+  image:
+    name: Build and push image
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: teleport-linux-amd64
+          path: build
+
+      - name: Make binaries executable
+        run: chmod +x build/teleport build/tctl
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata (tags/labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=tag
+            type=sha
+            type=raw,value=${{ github.event.inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: teleport-linux-amd64
+          path: build
+
+      - name: Package tarball + checksums
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          chmod +x build/teleport build/tctl build/tsh build/tbot
+          mkdir -p dist/teleport
+          cp build/teleport build/tctl build/tsh build/tbot dist/teleport/
+          TARBALL="teleport-v${VERSION}-linux-amd64-bin.tar.gz"
+          tar -C dist -czf "$TARBALL" teleport
+          cp build/teleport "teleport-v${VERSION}-linux-amd64"
+          cp build/tctl     "tctl-v${VERSION}-linux-amd64"
+          sha256sum "$TARBALL" "teleport-v${VERSION}-linux-amd64" "tctl-v${VERSION}-linux-amd64" \
+            > "teleport-v${VERSION}-linux-amd64.sha256"
+          ls -la *.tar.gz *.sha256 teleport-v* tctl-v*
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            teleport-v${{ needs.build.outputs.version }}-linux-amd64-bin.tar.gz
+            teleport-v${{ needs.build.outputs.version }}-linux-amd64
+            tctl-v${{ needs.build.outputs.version }}-linux-amd64
+            teleport-v${{ needs.build.outputs.version }}-linux-amd64.sha256
+          generate_release_notes: true

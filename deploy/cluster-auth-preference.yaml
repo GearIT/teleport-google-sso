@@ -1,0 +1,12 @@
+# Make OIDC (Google) the default connector shown on the login page.
+# Local username/password login remains available as a fallback.
+kind: cluster_auth_preference
+version: v2
+metadata:
+  name: cluster-auth-preference
+spec:
+  type: oidc
+  connector_name: google
+  # v19 does not allow disabling MFA. SSO logins via Google are not prompted
+  # for Teleport OTP; OTP applies to local users only.
+  second_factor: "otp"

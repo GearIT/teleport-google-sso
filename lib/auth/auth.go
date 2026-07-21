@@ -996,6 +996,14 @@ func NewServer(cfg *InitConfig, opts ...ServerOption) (as *Server, err error) {
 		as.logger.WarnContext(closeCtx, "Auth server starting without cache (may have negative performance implications)")
 	}
 
+	// PATCH: enable OIDC for OSS. Register a native OIDC service so the OIDC
+	// (Google SSO) login flow works without the enterprise plugin. Enterprise
+	// builds register their own OIDCService later (via the plugin registry),
+	// which overrides this one.
+	if as.oidcAuthService == nil {
+		as.SetOIDCService(newOSSOIDCService(as))
+	}
+
 	return as, nil
 }
 

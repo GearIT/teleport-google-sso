@@ -134,3 +134,9 @@ unit-tests*.json
 
 # Local Claude config
 .claude
+
+# Local deploy secrets (real connector with client_secret). Commit only the
+# *.example.yaml templates under deploy/.
+deploy/google-oidc.yaml
+/google-oidc.yaml
+*.log

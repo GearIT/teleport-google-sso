@@ -1,0 +1,32 @@
+# Production-oriented single-process Teleport config (auth + proxy).
+# Mounted into the container at /etc/teleport/teleport.yaml by docker-compose.
+#
+# Replace teleport.example.com with your real public DNS name. With ACME
+# enabled Teleport obtains a Let's Encrypt certificate automatically, so the
+# proxy must be reachable from the internet on port 443.
+version: v3
+teleport:
+  nodename: teleport.example.com
+  data_dir: /var/lib/teleport
+  log:
+    output: stderr
+    severity: INFO
+
+auth_service:
+  enabled: true
+  cluster_name: teleport.example.com
+  proxy_listener_mode: multiplex
+
+proxy_service:
+  enabled: true
+  web_listen_addr: 0.0.0.0:3080
+  # public_addr is used to build the OIDC redirect URL that Google sees.
+  # With ACME on 443 the Google redirect URI is:
+  #   https://teleport.example.com/v1/webapi/oidc/callback
+  public_addr: teleport.example.com:443
+  acme:
+    enabled: true
+    email: admin@example.com
+
+ssh_service:
+  enabled: false

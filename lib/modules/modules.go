@@ -400,6 +400,9 @@ func (p *defaultModules) Features() Features {
 			entitlements.Desktop:            {Enabled: true, Limit: 0},
 			entitlements.JoinActiveSessions: {Enabled: true, Limit: 0},
 			entitlements.K8s:                {Enabled: true, Limit: 0},
+			// PATCH: enable OIDC for OSS. Enables the OIDC (Google SSO) connector
+			// which is normally an enterprise-only entitlement.
+			entitlements.OIDC: {Enabled: true, Limit: 0},
 		},
 	}
 }

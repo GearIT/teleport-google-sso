@@ -1,0 +1,32 @@
+# Deploy the patched OSS Teleport (Google SSO / OIDC) on a server by pulling
+# the image built by .github/workflows/build-teleport-image.yml.
+#
+# Usage on the server:
+#   1. Edit teleport.yaml (set your real public_addr / cluster_name / ACME email).
+#   2. docker compose pull
+#   3. docker compose up -d
+#   4. Create the first admin + the Google connector:
+#      docker compose exec teleport tctl users add admin --roles=editor,access,auditor
+#      docker compose exec teleport tctl create -f /etc/teleport/google-oidc.yaml
+#      docker compose exec teleport tctl create -f /etc/teleport/cluster-auth-preference.yaml
+services:
+  teleport:
+    # Replace OWNER/REPO with your GitHub org/repo (lowercase). Example:
+    #   ghcr.io/acme/teleport-google-sso/teleport:latest
+    image: ghcr.io/GearIT/teleport-google-sso/teleport:latest
+    container_name: teleport
+    restart: always
+    # host networking is simplest for a proxy that terminates many protocols on
+    # one port; alternatively map explicit ports (see the "ports" block below).
+    ports:
+      - "443:3080"   # web UI + all multiplexed proxy protocols
+      - "3025:3025"  # auth API (only needed if external agents join directly)
+    volumes:
+      - ./teleport.yaml:/etc/teleport/teleport.yaml:ro
+      - ./google-oidc.yaml:/etc/teleport/google-oidc.yaml:ro
+      - ./cluster-auth-preference.yaml:/etc/teleport/cluster-auth-preference.yaml:ro
+      - teleport-data:/var/lib/teleport
+    # ACME needs to reach Let's Encrypt; DNS for public_addr must point here.
+
+volumes:
+  teleport-data:
