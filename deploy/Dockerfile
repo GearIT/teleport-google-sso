@@ -2,15 +2,17 @@
 #
 # This is a small runtime-only image: it expects the teleport (and tctl)
 # binaries to already be built and present under build/ in the build context.
-# The GitHub Actions workflow (.github/workflows/build-teleport-image.yml)
-# builds those binaries inside the Teleport buildbox, then builds this image.
+# The GitHub Actions workflow (.github/workflows/release.yml) builds those
+# binaries inside the Teleport buildbox, then builds this image.
 #
 # Build locally (after `make full`):
 #   docker build -f deploy/Dockerfile -t teleport-oidc:local .
 FROM debian:12-slim
 
+# libfido2 is required by the tctl/tsh binaries (built with CGO FIDO2 support
+# for hardware security keys). The teleport server itself does not need it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates dumb-init \
+    && apt-get install -y --no-install-recommends ca-certificates dumb-init libfido2-1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Binaries produced by `make full` (webassets embedded in teleport).
