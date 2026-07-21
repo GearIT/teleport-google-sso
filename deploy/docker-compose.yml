@@ -1,5 +1,5 @@
 # Deploy the patched OSS Teleport (Google SSO / OIDC) on a server by pulling
-# the image built by .github/workflows/build-teleport-image.yml.
+# the image built by .github/workflows/release.yml.
 #
 # Usage on the server:
 #   1. Edit teleport.yaml (set your real public_addr / cluster_name / ACME email).
