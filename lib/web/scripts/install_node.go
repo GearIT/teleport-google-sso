@@ -154,6 +154,8 @@ func GetNodeInstallScript(ctx context.Context, opts InstallNodeScriptOptions) (s
 
 	var buf bytes.Buffer
 
+	cdnBaseURL := strings.TrimRight(opts.InstallOptions.CDNBaseURL, "/")
+
 	// TODO(hugoShaka): burn this map and replace it by something saner in a future PR.
 
 	// This section relies on Go's default zero values to make sure that the settings
@@ -170,6 +172,8 @@ func GetNodeInstallScript(ctx context.Context, opts InstallNodeScriptOptions) (s
 		"caPinsOld":               strings.Join(opts.CAPins, " "),
 		"caPins":                  strings.Join(opts.CAPins, ","),
 		"packageName":             opts.InstallOptions.TeleportFlavor,
+		"cdnBaseURL":              shsprintf.EscapeDefaultContext(cdnBaseURL),
+		"forceTarball":            strconv.FormatBool(ForceTarballInstall(cdnBaseURL)),
 		"repoChannel":             repoChannel,
 		"installUpdater":          opts.InstallOptions.AutoupdateStyle.String(),
 		"version":                 shsprintf.EscapeDefaultContext(opts.InstallOptions.TeleportVersion.String()),

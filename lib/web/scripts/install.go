@@ -35,6 +35,23 @@ import (
 	"github.com/gravitational/teleport/lib/web/scripts/oneoff"
 )
 
+const teleportPreReleaseCDN = "https://cdn.cloud.gravitational.io"
+
+// ForceTarballInstall reports whether install scripts must download the tarball
+// because the CDN does not host distro packages (.deb/.rpm).
+func ForceTarballInstall(cdnBaseURL string) bool {
+	cdnBaseURL = strings.TrimRight(cdnBaseURL, "/")
+	if cdnBaseURL == "" {
+		return false
+	}
+	switch cdnBaseURL {
+	case teleportassets.TeleportReleaseCDN, teleportPreReleaseCDN:
+		return false
+	default:
+		return true
+	}
+}
+
 // AutoupdateStyle represents the kind of autoupdate mechanism the script should use.
 type AutoupdateStyle int
 
@@ -202,6 +219,11 @@ func getLegacyInstallScript(ctx context.Context, opts InstallScriptOptions) (str
 		edition = "oss"
 	}
 	tunedScript = editionVar.ReplaceAllString(tunedScript, fmt.Sprintf(`TELEPORT_EDITION="%s"`, edition))
+
+	if opts.CDNBaseURL != "" {
+		cdnBase := strings.TrimRight(opts.CDNBaseURL, "/")
+		tunedScript = strings.ReplaceAll(tunedScript, "https://cdn.teleport.dev/", cdnBase+"/")
+	}
 
 	return tunedScript, nil
 }

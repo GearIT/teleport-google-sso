@@ -2054,7 +2054,7 @@ func TestJoinScript(t *testing.T) {
 	}
 
 	t.Run("direct download links", func(t *testing.T) {
-		getGravitationalTeleportLinkRegex := regexp.MustCompile(`https://cdn\.teleport\.dev/\${TELEPORT_PACKAGE_NAME}[-_]v?\${TELEPORT_VERSION}`)
+		getGravitationalTeleportLinkRegex := regexp.MustCompile(`\$\{TELEPORT_CDN_BASE\}/\$\{TELEPORT_PACKAGE_NAME\}[-_]v?\$\{TELEPORT_VERSION\}`)
 
 		t.Run("oss", func(t *testing.T) {
 			h := newAutoupdateTestHandler(t, autoupdateTestHandlerConfig{
@@ -2066,12 +2066,13 @@ func TestJoinScript(t *testing.T) {
 
 			matches := getGravitationalTeleportLinkRegex.FindAllString(script, -1)
 			require.ElementsMatch(t, matches, []string{
-				"https://cdn.teleport.dev/${TELEPORT_PACKAGE_NAME}-v${TELEPORT_VERSION}",
-				"https://cdn.teleport.dev/${TELEPORT_PACKAGE_NAME}_${TELEPORT_VERSION}",
-				"https://cdn.teleport.dev/${TELEPORT_PACKAGE_NAME}-${TELEPORT_VERSION}",
+				"${TELEPORT_CDN_BASE}/${TELEPORT_PACKAGE_NAME}-v${TELEPORT_VERSION}",
+				"${TELEPORT_CDN_BASE}/${TELEPORT_PACKAGE_NAME}_${TELEPORT_VERSION}",
+				"${TELEPORT_CDN_BASE}/${TELEPORT_PACKAGE_NAME}-${TELEPORT_VERSION}",
 			})
 			require.Contains(t, script, "TELEPORT_PACKAGE_NAME='teleport'")
 			require.Contains(t, script, "TELEPORT_ARCHIVE_PATH='teleport'")
+			require.Contains(t, script, "TELEPORT_CDN_BASE='https://cdn.teleport.dev'")
 		})
 
 		t.Run("ent", func(t *testing.T) {
@@ -2085,12 +2086,24 @@ func TestJoinScript(t *testing.T) {
 
 			matches := getGravitationalTeleportLinkRegex.FindAllString(script, -1)
 			require.ElementsMatch(t, matches, []string{
-				"https://cdn.teleport.dev/${TELEPORT_PACKAGE_NAME}-v${TELEPORT_VERSION}",
-				"https://cdn.teleport.dev/${TELEPORT_PACKAGE_NAME}_${TELEPORT_VERSION}",
-				"https://cdn.teleport.dev/${TELEPORT_PACKAGE_NAME}-${TELEPORT_VERSION}",
+				"${TELEPORT_CDN_BASE}/${TELEPORT_PACKAGE_NAME}-v${TELEPORT_VERSION}",
+				"${TELEPORT_CDN_BASE}/${TELEPORT_PACKAGE_NAME}_${TELEPORT_VERSION}",
+				"${TELEPORT_CDN_BASE}/${TELEPORT_PACKAGE_NAME}-${TELEPORT_VERSION}",
 			})
 			require.Contains(t, script, "TELEPORT_PACKAGE_NAME='teleport-ent'")
 			require.Contains(t, script, "TELEPORT_ARCHIVE_PATH='teleport-ent'")
+			require.Contains(t, script, "TELEPORT_CDN_BASE='https://cdn.teleport.dev'")
+		})
+
+		t.Run("agpl build uses github releases cdn", func(t *testing.T) {
+			h := newAutoupdateTestHandler(t, autoupdateTestHandlerConfig{
+				testModules: &modulestest.Modules{TestBuildType: modules.BuildOSS},
+				token:       token,
+			})
+			script, err := h.getJoinScript(context.Background(), scriptSettings{token: validToken})
+			require.NoError(t, err)
+			require.Contains(t, script, "TELEPORT_CDN_BASE='"+defaults.DefaultAGPLCDNBaseURL+"'")
+			require.Contains(t, script, "FORCE_TARBALL_INSTALL='true'")
 		})
 	})
 
