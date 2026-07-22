@@ -1,0 +1,26 @@
+name: Validate packaging
+
+# Runs on every push/PR touching release packaging — seconds, not 30 minutes.
+on:
+  push:
+    paths:
+      - "deploy/package-release-tarball.sh"
+      - "deploy/validate-release-tarball.sh"
+      - "examples/systemd/teleport.service"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/validate-packaging.yml"
+  pull_request:
+    paths:
+      - "deploy/package-release-tarball.sh"
+      - "deploy/validate-release-tarball.sh"
+      - "examples/systemd/teleport.service"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/validate-packaging.yml"
+
+jobs:
+  validate-packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release tarball layout
+        run: bash deploy/validate-release-tarball.sh

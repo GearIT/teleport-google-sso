@@ -29,8 +29,21 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}/teleport
 
 jobs:
+  # Fast gate (~seconds). Catches missing systemd unit / wrong checksum names
+  # BEFORE spending ~30m in buildbox.
+  validate-packaging:
+    name: Validate release tarball layout
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate packaging script
+        run: bash deploy/validate-release-tarball.sh
+
   build:
     name: Build binaries (buildbox)
+    needs: validate-packaging
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/gravitational/teleport-buildbox:teleport19
@@ -123,6 +136,9 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download binaries
         uses: actions/download-artifact@v4
         with:
@@ -135,17 +151,9 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x build/teleport build/tctl build/tsh build/tbot
-          mkdir -p dist/teleport
-          cp build/teleport build/tctl build/tsh build/tbot dist/teleport/
-          TARBALL="teleport-v${VERSION}-linux-amd64-bin.tar.gz"
-          tar -C dist -czf "$TARBALL" teleport
-          cp build/teleport "teleport-v${VERSION}-linux-amd64"
-          cp build/tctl     "tctl-v${VERSION}-linux-amd64"
-          # Install scripts fetch "${TARBALL}.sha256" (URL + ".sha256"). Keep a
-          # combined checksum file for humans downloading standalone binaries.
-          sha256sum "$TARBALL" > "${TARBALL}.sha256"
-          sha256sum "$TARBALL" "teleport-v${VERSION}-linux-amd64" "tctl-v${VERSION}-linux-amd64" \
-            > "teleport-v${VERSION}-linux-amd64.sha256"
+          bash deploy/package-release-tarball.sh
+          # Fail the release job if layout is wrong (should already be caught above).
+          tar -tzf "teleport-v${VERSION}-linux-amd64-bin.tar.gz" | grep -F 'teleport/examples/systemd/teleport.service'
           ls -la *.tar.gz *.sha256 teleport-v* tctl-v*
 
       - name: Publish GitHub Release

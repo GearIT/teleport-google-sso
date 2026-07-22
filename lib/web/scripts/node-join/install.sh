@@ -455,7 +455,31 @@ install_launchd_config() {
 # installs the teleport-provided systemd unit
 install_systemd_unit() {
     log "Installing Teleport systemd unit to ${SYSTEMD_UNIT_PATH}"
-    ${COPY_COMMAND} ./${TELEPORT_ARCHIVE_PATH}/examples/systemd/teleport.service ${SYSTEMD_UNIT_PATH}
+    UNIT_SRC="./${TELEPORT_ARCHIVE_PATH}/examples/systemd/teleport.service"
+    if [[ -f "${UNIT_SRC}" ]]; then
+        ${COPY_COMMAND} "${UNIT_SRC}" "${SYSTEMD_UNIT_PATH}"
+    else
+        # Custom/minimal tarballs may omit examples/; keep enroll working.
+        log "systemd unit missing from tarball (${UNIT_SRC}); writing built-in unit"
+        cat >"${SYSTEMD_UNIT_PATH}" <<'EOF'
+[Unit]
+Description=Teleport Service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+EnvironmentFile=-/etc/default/teleport
+ExecStart=/usr/local/bin/teleport start --config /etc/teleport.yaml --pid-file=/run/teleport.pid
+ExecReload=/bin/sh -c "exec pkill -HUP -L -F /run/teleport.pid"
+PIDFile=/run/teleport.pid
+LimitNOFILE=524288
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    fi
     log "Reloading unit files (systemctl daemon-reload)"
     systemctl daemon-reload
 }
