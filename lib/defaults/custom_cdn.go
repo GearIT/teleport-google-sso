@@ -22,5 +22,6 @@ package defaults
 // this fork. Install/join scripts append the artifact name, e.g.
 // teleport-v19.0.0-linux-amd64-bin.tar.gz
 //
+// GitHub latest-asset pattern: /releases/latest/download/<filename>
 // Override at runtime with TELEPORT_CDN_BASE_URL if needed.
-const DefaultAGPLCDNBaseURL = "https://github.com/GearIT/teleport-google-sso/releases/download/latest"
+const DefaultAGPLCDNBaseURL = "https://github.com/GearIT/teleport-google-sso/releases/latest/download"
