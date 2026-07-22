@@ -141,6 +141,9 @@ jobs:
           tar -C dist -czf "$TARBALL" teleport
           cp build/teleport "teleport-v${VERSION}-linux-amd64"
           cp build/tctl     "tctl-v${VERSION}-linux-amd64"
+          # Install scripts fetch "${TARBALL}.sha256" (URL + ".sha256"). Keep a
+          # combined checksum file for humans downloading standalone binaries.
+          sha256sum "$TARBALL" > "${TARBALL}.sha256"
           sha256sum "$TARBALL" "teleport-v${VERSION}-linux-amd64" "tctl-v${VERSION}-linux-amd64" \
             > "teleport-v${VERSION}-linux-amd64.sha256"
           ls -la *.tar.gz *.sha256 teleport-v* tctl-v*
@@ -150,6 +153,7 @@ jobs:
         with:
           files: |
             teleport-v${{ needs.build.outputs.version }}-linux-amd64-bin.tar.gz
+            teleport-v${{ needs.build.outputs.version }}-linux-amd64-bin.tar.gz.sha256
             teleport-v${{ needs.build.outputs.version }}-linux-amd64
             tctl-v${{ needs.build.outputs.version }}-linux-amd64
             teleport-v${{ needs.build.outputs.version }}-linux-amd64.sha256

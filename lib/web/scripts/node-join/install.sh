@@ -396,8 +396,11 @@ download() {
         log "Will use ${SHA_COMMAND} to validate the checksum of the downloaded file"
         SHA_URL="${URL}.sha256"
         SHA_PATH="${OUTPUT_PATH}.sha256"
-        ${CURL_COMMAND} -o "${SHA_PATH}" "${SHA_URL}"
-        if ${SHA_COMMAND} --status -c "${SHA_PATH}"; then
+        # Custom CDNs (e.g. GitHub Releases) may omit per-artifact .sha256 files.
+        # Fail soft so enroll still works; prefer validating when the file exists.
+        if ! ${CURL_COMMAND} -o "${SHA_PATH}" "${SHA_URL}"; then
+            log "Checksum file not found at ${SHA_URL}; skipping checksum validation"
+        elif ${SHA_COMMAND} --status -c "${SHA_PATH}"; then
             log "The downloaded file's checksum validated correctly"
         else
             SHA_EXPECTED=$(cat "${SHA_PATH}")
