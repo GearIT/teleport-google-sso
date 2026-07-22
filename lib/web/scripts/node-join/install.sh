@@ -1108,6 +1108,9 @@ is_repo_available() {
 if [[ "$TELEPORT_FORMAT" == "updater" ]]; then
     log "Installing from updater binary."
     install_from_updater
+elif [[ "$TELEPORT_FORMAT" == "tarball" || "$TELEPORT_FORMAT" == "deb" || "$TELEPORT_FORMAT" == "rpm" ]]; then
+    log "Installing from binary file (${TELEPORT_FORMAT})."
+    install_from_file
 elif is_repo_available; then
     log "Installing repo for distro $ID."
     install_from_repo
