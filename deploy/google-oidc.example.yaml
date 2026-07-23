@@ -4,6 +4,8 @@
 #
 # Authorized redirect URI to register in Google Console must EXACTLY match
 # redirect_url below, e.g. https://teleport.example.com/v1/webapi/oidc/callback
+#
+# claims_to_roles: mỗi email/admin cần một entry riêng (hoặc dùng glob *@domain).
 kind: oidc
 version: v3
 metadata:
@@ -20,6 +22,8 @@ spec:
     - profile
   claims_to_roles:
     - claim: email
-      value: "*"
-      roles:
-        - access
+      value: "user1@example.com"
+      roles: [editor, access, auditor, ssh-ubuntu, ssh-root]
+    - claim: email
+      value: "*@example.com"
+      roles: [access]

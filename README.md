@@ -45,6 +45,8 @@ Build image tại chỗ (sau khi đã có binaries trong `build/`):
 docker build -f deploy/Dockerfile -t teleport-oidc:local .
 ```
 
+## [Quick Start](/deploy/README.md)
+
 ## Triển khai cơ bản (docker-compose)
 
 Trên server, dùng thư mục [`deploy/`](./deploy):
