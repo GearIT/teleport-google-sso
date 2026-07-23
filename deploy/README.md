@@ -89,5 +89,35 @@ nano $HOME/google-oidc.example.yaml
 sudo tctl create -f $HOME/google-oidc.yaml
 cp $HOME/teleport-google-sso/deploy/cluster-auth-preference.yaml $HOME/cluster-auth-preference.yaml
 sudo tctl create -f $HOME/cluster-auth-preference.yaml
+systemctl restart teleport.service
+sudo timedatectl set-timezone Asia/Ho_Chi_Minh 
 ```
 
+## 4. Cấu hình tag cho server ubuntu khi enroll teleport
+
+- Sửa cấu hình ở máy đã enroll xong
+```
+sudo nano /etc/teleport.yaml
+
+# Thêm ở mục label như sau, đây là bản full của label
+
+  labels:
+    teleport.internal/resource-id: xxxxx-xxxxx-xxxxx-xxxx
+    env: production
+    team: IT
+    owner: user
+    office: office-1
+    tier: tier-1
+  commands:
+    - name: os
+      command: ["/bin/sh", "-c", "lsb_release -ds || uname -sr"]
+      period: 24h
+    - name: kernel
+      command: ["/usr/bin/uname", "-r"]
+      period: 24h
+    - name: uptime
+      command: ["/usr/bin/uptime", "-p"]
+      period: 1h
+
+systemctl restart teleport.service 
+```
